@@ -62,6 +62,14 @@ function normalizeExecAsk(raw: string): "off" | "on-miss" | "always" | undefined
   return undefined;
 }
 
+function normalizeAgentMode(raw: string): "full" | "minimal" | "none" | undefined {
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === "full" || normalized === "minimal" || normalized === "none") {
+    return normalized;
+  }
+  return undefined;
+}
+
 export async function applySessionsPatchToStore(params: {
   cfg: OpenClawConfig;
   store: Record<string, SessionEntry>;
@@ -356,6 +364,19 @@ export async function applySessionsPatchToStore(params: {
         return invalid('invalid groupActivation (use "mention"|"always")');
       }
       next.groupActivation = normalized;
+    }
+  }
+
+  if ("agentMode" in patch) {
+    const raw = patch.agentMode;
+    if (raw === null) {
+      delete next.agentMode;
+    } else if (raw !== undefined) {
+      const normalized = normalizeAgentMode(String(raw));
+      if (!normalized) {
+        return invalid('invalid agentMode (use "full"|"minimal"|"none")');
+      }
+      next.agentMode = normalized;
     }
   }
 

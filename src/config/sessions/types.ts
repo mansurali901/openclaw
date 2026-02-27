@@ -111,6 +111,8 @@ export type SessionEntry = {
   groupActivation?: "mention" | "always";
   groupActivationNeedsSystemIntro?: boolean;
   sendPolicy?: "allow" | "deny";
+  /** Per-session agent capability: full (default), minimal, or none. */
+  agentMode?: "full" | "minimal" | "none";
   queueMode?:
     | "steer"
     | "followup"

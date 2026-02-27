@@ -65,6 +65,7 @@ export async function patchSession(
     thinkingLevel?: string | null;
     verboseLevel?: string | null;
     reasoningLevel?: string | null;
+    agentMode?: "full" | "minimal" | "none" | null;
   },
 ) {
   if (!state.client || !state.connected) {
@@ -82,6 +83,9 @@ export async function patchSession(
   }
   if ("reasoningLevel" in patch) {
     params.reasoningLevel = patch.reasoningLevel;
+  }
+  if ("agentMode" in patch) {
+    params.agentMode = patch.agentMode;
   }
   try {
     await state.client.request("sessions.patch", params);

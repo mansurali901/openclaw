@@ -27,6 +27,7 @@ export type SessionsProps = {
       thinkingLevel?: string | null;
       verboseLevel?: string | null;
       reasoningLevel?: string | null;
+      agentMode?: "full" | "minimal" | "none" | null;
     },
   ) => void;
   onDelete: (key: string) => void;
@@ -41,6 +42,13 @@ const VERBOSE_LEVELS = [
   { value: "full", label: "full" },
 ] as const;
 const REASONING_LEVELS = ["", "off", "on", "stream"] as const;
+
+const AGENT_MODE_OPTIONS = [
+  { value: "", label: "inherit" },
+  { value: "full", label: "Full" },
+  { value: "minimal", label: "Minimal" },
+  { value: "none", label: "None" },
+] as const;
 
 function normalizeProviderId(provider?: string | null): string {
   if (!provider) {
@@ -198,6 +206,7 @@ export function renderSessions(props: SessionsProps) {
           <div>Thinking</div>
           <div>Verbose</div>
           <div>Reasoning</div>
+          <div>Agent mode</div>
           <div>Actions</div>
         </div>
         ${
@@ -230,6 +239,7 @@ function renderRow(
   const verboseLevels = withCurrentLabeledOption(VERBOSE_LEVELS, verbose);
   const reasoning = row.reasoningLevel ?? "";
   const reasoningLevels = withCurrentOption(REASONING_LEVELS, reasoning);
+  const agentMode = row.agentMode ?? "";
   const displayName =
     typeof row.displayName === "string" && row.displayName.trim().length > 0
       ? row.displayName.trim()
@@ -307,6 +317,24 @@ function renderRow(
             (level) =>
               html`<option value=${level} ?selected=${reasoning === level}>
                 ${level || "inherit"}
+              </option>`,
+          )}
+        </select>
+      </div>
+      <div>
+        <select
+          ?disabled=${disabled}
+          @change=${(e: Event) => {
+            const value = (e.target as HTMLSelectElement).value;
+            onPatch(row.key, {
+              agentMode: value === "full" || value === "minimal" || value === "none" ? value : null,
+            });
+          }}
+        >
+          ${AGENT_MODE_OPTIONS.map(
+            (opt) =>
+              html`<option value=${opt.value} ?selected=${agentMode === opt.value}>
+                ${opt.label}
               </option>`,
           )}
         </select>

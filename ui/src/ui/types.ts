@@ -426,6 +426,7 @@ export type GatewaySessionRow = {
   verboseLevel?: string;
   reasoningLevel?: string;
   elevatedLevel?: string;
+  agentMode?: "full" | "minimal" | "none";
   inputTokens?: number;
   outputTokens?: number;
   totalTokens?: number;

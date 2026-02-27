@@ -78,6 +78,14 @@ export const SessionsPatchParamsSchema = Type.Object(
     groupActivation: Type.Optional(
       Type.Union([Type.Literal("mention"), Type.Literal("always"), Type.Null()]),
     ),
+    agentMode: Type.Optional(
+      Type.Union([
+        Type.Literal("full"),
+        Type.Literal("minimal"),
+        Type.Literal("none"),
+        Type.Null(),
+      ]),
+    ),
   },
   { additionalProperties: false },
 );
