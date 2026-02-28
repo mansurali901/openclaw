@@ -183,6 +183,7 @@ export class OpenClawApp extends LitElement {
   @state() configIssues: unknown[] = [];
   @state() configSaving = false;
   @state() configApplying = false;
+  @state() compactionModeApplying = false;
   @state() updateRunning = false;
   @state() applySessionKey = this.settings.lastActiveSessionKey;
   @state() configSnapshot: ConfigSnapshot | null = null;
@@ -197,6 +198,7 @@ export class OpenClawApp extends LitElement {
   @state() configSearchQuery = "";
   @state() configActiveSection: string | null = null;
   @state() configActiveSubsection: string | null = null;
+  @state() overviewCompactionModeSelection: "safeguard" | "balanced" | "minimal" | null = null;
 
   @state() channelsLoading = false;
   @state() channelsSnapshot: ChannelsStatusSnapshot | null = null;

@@ -16,6 +16,7 @@ import {
   loadConfig,
   runUpdate,
   saveConfig,
+  setCompactionModeAndRestart,
   updateConfigFormValue,
   removeConfigFormValue,
 } from "./controllers/config.ts";
@@ -158,6 +159,20 @@ export function renderApp(state: AppViewState) {
   const chatAvatarUrl = state.chatAvatarUrl ?? assistantAvatarUrl ?? null;
   const configValue =
     state.configForm ?? (state.configSnapshot?.config as Record<string, unknown> | null);
+  const overviewCompactionMode =
+    state.overviewCompactionModeSelection ??
+    ((): "safeguard" | "balanced" | "minimal" => {
+      const cfg = state.configSnapshot?.config as Record<string, unknown> | undefined;
+      const c = (cfg?.agents as Record<string, unknown> | undefined)?.defaults as
+        | Record<string, unknown>
+        | undefined;
+      const comp = c?.compaction as Record<string, unknown> | undefined;
+      const m = comp?.mode;
+      if (m === "safeguard" || m === "balanced" || m === "minimal") {
+        return m;
+      }
+      return "balanced";
+    })();
   const basePath = normalizeBasePath(state.basePath ?? "");
   const resolvedAgentId =
     state.agentsSelectedId ??
@@ -339,6 +354,9 @@ export function renderApp(state: AppViewState) {
                 cronEnabled: state.cronStatus?.enabled ?? null,
                 cronNext,
                 lastChannelsRefresh: state.channelsLastSuccess,
+                compactionMode: overviewCompactionMode,
+                configLoading: state.configLoading,
+                compactionModeApplying: state.compactionModeApplying,
                 onSettingsChange: (next) => state.applySettings(next),
                 onPasswordChange: (next) => (state.password = next),
                 onSessionKeyChange: (next) => {
@@ -354,6 +372,10 @@ export function renderApp(state: AppViewState) {
                 },
                 onConnect: () => state.connect(),
                 onRefresh: () => state.loadOverview(),
+                onCompactionModeChange: (mode) => {
+                  state.overviewCompactionModeSelection = mode;
+                },
+                onCompactionModeApply: (mode) => void setCompactionModeAndRestart(state, mode),
               })
             : nothing
         }

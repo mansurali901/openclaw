@@ -106,6 +106,7 @@ export type AppViewState = {
   configIssues: unknown[];
   configSaving: boolean;
   configApplying: boolean;
+  compactionModeApplying: boolean;
   updateRunning: boolean;
   applySessionKey: string;
   configSnapshot: ConfigSnapshot | null;
@@ -119,6 +120,7 @@ export type AppViewState = {
   configSearchQuery: string;
   configActiveSection: string | null;
   configActiveSubsection: string | null;
+  overviewCompactionModeSelection: "safeguard" | "balanced" | "minimal" | null;
   channelsLoading: boolean;
   channelsSnapshot: ChannelsStatusSnapshot | null;
   channelsError: string | null;

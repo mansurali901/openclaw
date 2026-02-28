@@ -81,6 +81,19 @@ export const zh_TW: TranslationMap = {
       cron: "定時任務",
       cronNext: "下次喚醒 {time}",
     },
+    agentBehavior: {
+      title: "代理行為",
+      subtitle:
+        "壓縮模式影響 token 使用和上下文保留。Safeguard 保留更多近期上下文；Balanced 為基線；Minimal 使用更少 token。",
+      configHint:
+        "變更會儲存到此閘道的設定檔。使用 dev（如 gateway:dev）時，設定檔為 ~/.openclaw-dev/openclaw.json。使用 openclaw --dev config get agents.defaults.compaction.mode 可讀取同一值。",
+      modeSafeguard: "Safeguard",
+      modeBalanced: "Balanced",
+      modeMinimal: "Minimal",
+      apply: "應用並重啟網關",
+      applying: "應用中…",
+      configLoadError: "配置未加載。請刷新頁面後重試。",
+    },
     notes: {
       title: "備註",
       subtitle: "遠程控制設置的快速提醒。",

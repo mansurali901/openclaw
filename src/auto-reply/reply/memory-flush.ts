@@ -21,6 +21,15 @@ export const DEFAULT_MEMORY_FLUSH_SYSTEM_PROMPT = [
   `You may reply, but usually ${SILENT_REPLY_TOKEN} is correct.`,
 ].join(" ");
 
+/** Preset names for memoryFlush.systemPrompt (OpenClaw practice). "balanced" = full instructions; "minimal" = shorter to save tokens. */
+export const MEMORY_FLUSH_SYSTEM_PROMPT_PRESETS: Record<string, string> = {
+  balanced: DEFAULT_MEMORY_FLUSH_SYSTEM_PROMPT,
+  minimal: [
+    "Pre-compaction flush. Save key memories to the memory file.",
+    `If nothing to store, reply with ${SILENT_REPLY_TOKEN}.`,
+  ].join(" "),
+};
+
 function formatDateStampInTimezone(nowMs: number, timezone: string): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
@@ -80,7 +89,11 @@ export function resolveMemoryFlushSettings(cfg?: OpenClawConfig): MemoryFlushSet
   const softThresholdTokens =
     normalizeNonNegativeInt(defaults?.softThresholdTokens) ?? DEFAULT_MEMORY_FLUSH_SOFT_TOKENS;
   const prompt = defaults?.prompt?.trim() || DEFAULT_MEMORY_FLUSH_PROMPT;
-  const systemPrompt = defaults?.systemPrompt?.trim() || DEFAULT_MEMORY_FLUSH_SYSTEM_PROMPT;
+  const systemPromptRaw = defaults?.systemPrompt?.trim();
+  const systemPrompt =
+    (systemPromptRaw && MEMORY_FLUSH_SYSTEM_PROMPT_PRESETS[systemPromptRaw]) ||
+    systemPromptRaw ||
+    DEFAULT_MEMORY_FLUSH_SYSTEM_PROMPT;
   const reserveTokensFloor =
     normalizeNonNegativeInt(cfg?.agents?.defaults?.compaction?.reserveTokensFloor) ??
     DEFAULT_PI_COMPACTION_RESERVE_TOKENS_FLOOR;

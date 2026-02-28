@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OpenClawConfig } from "../../config/config.js";
-import { resolveMemoryFlushPromptForRun } from "./memory-flush.js";
+import { resolveMemoryFlushPromptForRun, resolveMemoryFlushSettings } from "./memory-flush.js";
 
 describe("resolveMemoryFlushPromptForRun", () => {
   const cfg = {
@@ -33,5 +33,52 @@ describe("resolveMemoryFlushPromptForRun", () => {
 
     expect(prompt).toContain("Current time: already present");
     expect((prompt.match(/Current time:/g) ?? []).length).toBe(1);
+  });
+});
+
+describe("resolveMemoryFlushSettings systemPrompt presets", () => {
+  it("resolves 'balanced' preset to default system prompt", () => {
+    const settings = resolveMemoryFlushSettings({
+      agents: {
+        defaults: {
+          compaction: {
+            memoryFlush: { systemPrompt: "balanced" },
+          },
+        },
+      },
+    } as OpenClawConfig);
+    expect(settings).not.toBeNull();
+    expect(settings!.systemPrompt).toContain("Pre-compaction memory flush turn");
+    expect(settings!.systemPrompt).toContain("NO_REPLY");
+  });
+
+  it("resolves 'minimal' preset to shorter system prompt", () => {
+    const settings = resolveMemoryFlushSettings({
+      agents: {
+        defaults: {
+          compaction: {
+            memoryFlush: { systemPrompt: "minimal" },
+          },
+        },
+      },
+    } as OpenClawConfig);
+    expect(settings).not.toBeNull();
+    expect(settings!.systemPrompt).toContain("Pre-compaction flush");
+    expect(settings!.systemPrompt).toContain("NO_REPLY");
+  });
+
+  it("uses custom string when not a preset name", () => {
+    const custom = "My custom memory flush instructions.";
+    const settings = resolveMemoryFlushSettings({
+      agents: {
+        defaults: {
+          compaction: {
+            memoryFlush: { systemPrompt: custom },
+          },
+        },
+      },
+    } as OpenClawConfig);
+    expect(settings).not.toBeNull();
+    expect(settings!.systemPrompt).toContain(custom);
   });
 });

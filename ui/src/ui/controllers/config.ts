@@ -217,3 +217,47 @@ export function removeConfigFormValue(state: ConfigState, path: Array<string | n
     state.configRaw = serializeConfigForm(base);
   }
 }
+
+/** Compaction mode values for Agent behavior dropdown (safeguard | balanced | minimal). */
+export type CompactionMode = "safeguard" | "balanced" | "minimal";
+
+export async function setCompactionModeAndRestart(
+  state: ConfigState & { compactionModeApplying?: boolean },
+  mode: CompactionMode,
+): Promise<void> {
+  if (!state.client || !state.connected) {
+    return;
+  }
+  const baseHash = state.configSnapshot?.hash;
+  if (!baseHash) {
+    state.lastError = "Config not loaded; refresh and retry.";
+    return;
+  }
+  state.compactionModeApplying = true;
+  state.lastError = null;
+  try {
+    const compactionPatch: { mode: CompactionMode; memoryFlush?: { systemPrompt: string } } = {
+      mode,
+    };
+    if (mode === "safeguard") {
+      compactionPatch.memoryFlush = { systemPrompt: "balanced" };
+    }
+    const patch = {
+      agents: { defaults: { compaction: compactionPatch } },
+    };
+    await state.client.request("config.patch", {
+      raw: JSON.stringify(patch),
+      baseHash,
+    });
+    await loadConfig(state);
+    if ("overviewCompactionModeSelection" in state && state.configSnapshot?.config) {
+      (
+        state as { overviewCompactionModeSelection: CompactionMode }
+      ).overviewCompactionModeSelection = mode;
+    }
+  } catch (err) {
+    state.lastError = String(err);
+  } finally {
+    state.compactionModeApplying = false;
+  }
+}

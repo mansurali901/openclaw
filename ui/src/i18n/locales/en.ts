@@ -81,6 +81,19 @@ export const en: TranslationMap = {
       cron: "Cron",
       cronNext: "Next wake {time}",
     },
+    agentBehavior: {
+      title: "Agent behavior",
+      subtitle:
+        "Compaction mode affects token use and context preservation. Safeguard keeps more recent context; balanced is baseline; minimal uses fewer tokens.",
+      configHint:
+        "Changes are saved to this gateway's config file. When using dev (e.g. gateway:dev), that is ~/.openclaw-dev/openclaw.json. Use openclaw --dev config get agents.defaults.compaction.mode to read the same value.",
+      modeSafeguard: "Safeguard",
+      modeBalanced: "Balanced",
+      modeMinimal: "Minimal",
+      apply: "Apply and restart gateway",
+      applying: "Applying…",
+      configLoadError: "Config not loaded. Refresh the page and try again.",
+    },
     notes: {
       title: "Notes",
       subtitle: "Quick reminders for remote control setups.",

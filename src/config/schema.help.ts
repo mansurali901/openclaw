@@ -911,7 +911,7 @@ export const FIELD_HELP: Record<string, string> = {
   "agents.defaults.compaction":
     "Compaction tuning for when context nears token limits, including history share, reserve headroom, and pre-compaction memory flush behavior. Use this when long-running sessions need stable continuity under tight context windows.",
   "agents.defaults.compaction.mode":
-    'Compaction strategy mode: "default" uses baseline behavior, while "safeguard" applies stricter guardrails to preserve recent context. Keep "default" unless you observe aggressive history loss near limit boundaries.',
+    'Compaction strategy mode: "safeguard" preserves more recent context with stricter guardrails; "balanced" is baseline; "minimal" uses fewer tokens. Use "safeguard" for long sessions, "minimal" to reduce token use.',
   "agents.defaults.compaction.reserveTokens":
     "Token headroom reserved for reply generation and tool output after compaction runs. Use higher reserves for verbose/tool-heavy sessions, and lower reserves when maximizing retained history matters more.",
   "agents.defaults.compaction.keepRecentTokens":
@@ -929,7 +929,7 @@ export const FIELD_HELP: Record<string, string> = {
   "agents.defaults.compaction.memoryFlush.prompt":
     "User-prompt template used for the pre-compaction memory flush turn when generating memory candidates. Use this only when you need custom extraction instructions beyond the default memory flush behavior.",
   "agents.defaults.compaction.memoryFlush.systemPrompt":
-    "System-prompt override for the pre-compaction memory flush turn to control extraction style and safety constraints. Use carefully so custom instructions do not reduce memory quality or leak sensitive context.",
+    'System-prompt override for the pre-compaction memory flush turn. Use preset names "balanced" (full instructions) or "minimal" (shorter, cost-optimized), or a custom string. Custom instructions should not reduce memory quality or leak sensitive context.',
   "agents.defaults.embeddedPi":
     "Embedded Pi runner hardening controls for how workspace-local Pi settings are trusted and applied in OpenClaw sessions.",
   "agents.defaults.embeddedPi.projectSettingsPolicy":

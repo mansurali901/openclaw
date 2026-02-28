@@ -1,6 +1,7 @@
 import { html } from "lit";
 import { ConnectErrorDetailCodes } from "../../../../src/gateway/protocol/connect-error-details.js";
 import { t, i18n, type Locale } from "../../i18n/index.ts";
+import type { CompactionMode } from "../controllers/config.ts";
 import { buildExternalLinkRel, EXTERNAL_LINK_TARGET } from "../external-link.ts";
 import { formatRelativeTimestamp, formatDurationHuman } from "../format.ts";
 import type { GatewayHelloOk } from "../gateway.ts";
@@ -20,11 +21,16 @@ export type OverviewProps = {
   cronEnabled: boolean | null;
   cronNext: number | null;
   lastChannelsRefresh: number | null;
+  compactionMode: CompactionMode;
+  configLoading: boolean;
+  compactionModeApplying: boolean;
   onSettingsChange: (next: UiSettings) => void;
   onPasswordChange: (next: string) => void;
   onSessionKeyChange: (next: string) => void;
   onConnect: () => void;
   onRefresh: () => void;
+  onCompactionModeChange: (mode: CompactionMode) => void;
+  onCompactionModeApply: (mode: CompactionMode) => void;
 };
 
 export function renderOverview(props: OverviewProps) {
@@ -194,6 +200,43 @@ export function renderOverview(props: OverviewProps) {
   const currentLocale = i18n.getLocale();
 
   return html`
+    <section class="card" style="margin-bottom: 18px;">
+      <div class="card-title">${t("overview.agentBehavior.title")}</div>
+      <div class="card-sub">${t("overview.agentBehavior.subtitle")}</div>
+      <div class="muted" style="margin-top: 8px; font-size: 12px;">
+        ${t("overview.agentBehavior.configHint")}
+      </div>
+      <div class="form-grid" style="margin-top: 16px;">
+        <label class="field">
+          <span>${t("overview.agentBehavior.title")}</span>
+          <select
+            .value=${props.compactionMode}
+            ?disabled=${props.configLoading || props.compactionModeApplying || !props.connected}
+            @change=${(e: Event) => {
+              const v = (e.target as HTMLSelectElement).value as CompactionMode;
+              if (v === "safeguard" || v === "balanced" || v === "minimal") {
+                props.onCompactionModeChange(v);
+              }
+            }}
+          >
+            <option value="safeguard">${t("overview.agentBehavior.modeSafeguard")}</option>
+            <option value="balanced">${t("overview.agentBehavior.modeBalanced")}</option>
+            <option value="minimal">${t("overview.agentBehavior.modeMinimal")}</option>
+          </select>
+        </label>
+        <div class="row" style="align-items: center; gap: 12px;">
+          <button
+            class="btn"
+            ?disabled=${props.configLoading || props.compactionModeApplying || !props.connected}
+            @click=${() => props.onCompactionModeApply(props.compactionMode)}
+          >
+            ${props.compactionModeApplying ? t("overview.agentBehavior.applying") : t("overview.agentBehavior.apply")}
+          </button>
+          ${props.configLoading ? html`<span class="muted">${t("common.refresh")}…</span>` : ""}
+        </div>
+      </div>
+    </section>
+
     <section class="grid grid-cols-2">
       <div class="card">
         <div class="card-title">${t("overview.access.title")}</div>

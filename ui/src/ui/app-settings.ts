@@ -408,14 +408,34 @@ export function syncUrlWithSessionKey(host: SettingsHost, sessionKey: string, re
   }
 }
 
+function compactionModeFromConfig(
+  config: Record<string, unknown> | null | undefined,
+): "safeguard" | "balanced" | "minimal" {
+  const mode = (config?.agents as Record<string, unknown> | undefined)?.defaults as
+    | Record<string, unknown>
+    | undefined;
+  const c = mode?.compaction as Record<string, unknown> | undefined;
+  const m = c?.mode;
+  if (m === "safeguard" || m === "balanced" || m === "minimal") {
+    return m;
+  }
+  return "balanced";
+}
+
 export async function loadOverview(host: SettingsHost) {
+  const app = host as unknown as OpenClawApp;
   await Promise.all([
-    loadChannels(host as unknown as OpenClawApp, false),
-    loadPresence(host as unknown as OpenClawApp),
-    loadSessions(host as unknown as OpenClawApp),
-    loadCronStatus(host as unknown as OpenClawApp),
-    loadDebug(host as unknown as OpenClawApp),
+    loadChannels(app, false),
+    loadPresence(app),
+    loadSessions(app),
+    loadCronStatus(app),
+    loadDebug(app),
+    loadConfig(app),
   ]);
+  app.overviewCompactionModeSelection =
+    app.configSnapshot?.config && typeof app.configSnapshot.config === "object"
+      ? compactionModeFromConfig(app.configSnapshot.config)
+      : null;
 }
 
 export async function loadChannelsTab(host: SettingsHost) {
