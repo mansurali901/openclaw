@@ -21,6 +21,7 @@ export type UsageSessionQueryTarget = {
   providerOverride?: string;
   origin?: { provider?: string };
   model?: string;
+  agentMode?: "full" | "minimal" | "none";
   contextWeight?: unknown;
   usage?: {
     totalTokens?: number;
@@ -33,6 +34,7 @@ export type UsageSessionQueryTarget = {
 
 const QUERY_KEYS = new Set([
   "agent",
+  "agentmode",
   "channel",
   "chat",
   "provider",
@@ -155,6 +157,10 @@ export const matchesUsageQuery = (
   switch (key) {
     case "agent":
       return session.agentId?.toLowerCase().includes(value) ?? false;
+    case "agentmode":
+      return (
+        session.agentMode?.toLowerCase() === value || (value === "inherit" && !session.agentMode)
+      );
     case "channel":
       return session.channel?.toLowerCase().includes(value) ?? false;
     case "chat":

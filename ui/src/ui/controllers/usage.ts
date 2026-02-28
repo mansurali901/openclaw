@@ -11,6 +11,11 @@ export type UsageState = {
   usageError: string | null;
   usageStartDate: string;
   usageEndDate: string;
+  /** Time-of-day filter start (HH:MM). When both startTime and endTime are set, only usage in this window is shown. */
+  usageStartTime: string;
+  /** Time-of-day filter end (HH:MM). */
+  usageEndTime: string;
+  usageAgentModeFilter: "" | "full" | "minimal" | "none" | "inherit";
   usageSelectedSessions: string[];
   usageSelectedDays: string[];
   usageTimeSeries: SessionUsageTimeSeries | null;
@@ -187,6 +192,9 @@ export async function loadUsage(
   overrides?: {
     startDate?: string;
     endDate?: string;
+    agentMode?: "" | "full" | "minimal" | "none" | "inherit";
+    startTime?: string;
+    endTime?: string;
   },
 ) {
   // Capture client for TS18047 work around on it being possibly null
@@ -202,19 +210,30 @@ export async function loadUsage(
   try {
     const startDate = overrides?.startDate ?? state.usageStartDate;
     const endDate = overrides?.endDate ?? state.usageEndDate;
+    const agentMode = overrides?.agentMode ?? state.usageAgentModeFilter;
+    const startTime = overrides?.startTime ?? state.usageStartTime;
+    const endTime = overrides?.endTime ?? state.usageEndTime;
     const runUsageRequests = async (includeDateInterpretation: boolean) => {
       const dateInterpretation = buildDateInterpretationParams(
         state.usageTimeZone,
         includeDateInterpretation,
       );
+      const sessionsParams: Record<string, unknown> = {
+        startDate,
+        endDate,
+        ...dateInterpretation,
+        limit: 1000, // Cap at 1000 sessions
+        includeContextWeight: true,
+      };
+      if (agentMode) {
+        sessionsParams.agentMode = agentMode;
+      }
+      if (startTime && endTime) {
+        sessionsParams.startTime = startTime;
+        sessionsParams.endTime = endTime;
+      }
       return await Promise.all([
-        client.request("sessions.usage", {
-          startDate,
-          endDate,
-          ...dateInterpretation,
-          limit: 1000, // Cap at 1000 sessions
-          includeContextWeight: true,
-        }),
+        client.request("sessions.usage", sessionsParams),
         client.request("usage.cost", {
           startDate,
           endDate,

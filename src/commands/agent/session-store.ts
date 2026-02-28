@@ -10,6 +10,7 @@ import {
   type SessionEntry,
   updateSessionStore,
 } from "../../config/sessions.js";
+import { appendUsageByMode } from "../../infra/usage-by-mode-sidecar.js";
 
 type RunResult = Awaited<
   ReturnType<(typeof import("../../agents/pi-embedded.js"))["runEmbeddedPiAgent"]>
@@ -22,6 +23,8 @@ export async function updateSessionStoreAfterAgentRun(params: {
   sessionKey: string;
   storePath: string;
   sessionStore: Record<string, SessionEntry>;
+  /** Session transcript file path; when set, usage is appended to the usage-by-mode sidecar for tagging. */
+  sessionFile?: string;
   defaultProvider: string;
   defaultModel: string;
   fallbackProvider?: string;
@@ -101,4 +104,14 @@ export async function updateSessionStoreAfterAgentRun(params: {
     return merged;
   });
   sessionStore[sessionKey] = persisted;
+
+  // Tag this run's usage with the agent mode that was in effect (entry.agentMode), not the current one.
+  if (params.sessionFile && hasNonzeroUsage(usage)) {
+    appendUsageByMode({
+      sessionFile: params.sessionFile,
+      agentMode: entry.agentMode,
+      usage,
+      timestamp: Date.now(),
+    });
+  }
 }

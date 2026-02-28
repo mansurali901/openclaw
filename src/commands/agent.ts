@@ -217,6 +217,7 @@ function runAgentAttempt(params: {
     streamParams: params.opts.streamParams,
     agentDir: params.agentDir,
     onAgentEvent: params.onAgentEvent,
+    agentMode: params.sessionEntry?.agentMode,
   });
 }
 
@@ -802,6 +803,7 @@ export async function agentCommand(
         sessionKey,
         storePath,
         sessionStore,
+        sessionFile,
         defaultProvider: provider,
         defaultModel: model,
         fallbackProvider,

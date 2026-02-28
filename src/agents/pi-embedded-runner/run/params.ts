@@ -69,6 +69,11 @@ export type RunEmbeddedPiAgentParams = {
   clientTools?: ClientToolDefinition[];
   /** Disable built-in tools for this run (LLM-only mode). */
   disableTools?: boolean;
+  /**
+   * Agent mode: full = all tools, minimal = read + message only (reduces tokens), none = message only.
+   * Set per session in the Sessions tab; when minimal/none, token consumption is lower.
+   */
+  agentMode?: "full" | "minimal" | "none";
   provider?: string;
   model?: string;
   authProfileId?: string;

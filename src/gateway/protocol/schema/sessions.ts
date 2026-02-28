@@ -134,6 +134,23 @@ export const SessionsUsageParamsSchema = Type.Object(
     limit: Type.Optional(Type.Integer({ minimum: 1 })),
     /** Include context weight breakdown (systemPromptReport). */
     includeContextWeight: Type.Optional(Type.Boolean()),
+    /** Filter to usage that was consumed in this agent mode only (full, minimal, none, inherit). Uses tagged usage when available. */
+    agentMode: Type.Optional(
+      Type.Union([
+        Type.Literal("full"),
+        Type.Literal("minimal"),
+        Type.Literal("none"),
+        Type.Literal("inherit"),
+      ]),
+    ),
+    /** Start time of day for filtering (HH:MM or HH:MM:SS). Applied in the same timezone as dates. Omit for no time filter. */
+    startTime: Type.Optional(
+      Type.String({ pattern: "^(?:[0-1]?\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?$" }),
+    ),
+    /** End time of day for filtering (HH:MM or HH:MM:SS). Applied in the same timezone as dates. Omit for no time filter. */
+    endTime: Type.Optional(
+      Type.String({ pattern: "^(?:[0-1]?\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d)?$" }),
+    ),
   },
   { additionalProperties: false },
 );

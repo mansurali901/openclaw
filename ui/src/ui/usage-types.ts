@@ -4,6 +4,8 @@ export type SessionsUsageEntry = {
   sessionId?: string;
   updatedAt?: number;
   agentId?: string;
+  /** Per-session agent mode (full, minimal, none) when set. */
+  agentMode?: "full" | "minimal" | "none";
   channel?: string;
   chatType?: string;
   origin?: {
@@ -154,6 +156,7 @@ export type SessionsUsageResult = {
       totals: SessionsUsageTotals;
     }>;
     byAgent: Array<{ agentId: string; totals: SessionsUsageTotals }>;
+    byAgentMode?: Array<{ agentMode: string; totals: SessionsUsageTotals }>;
     byChannel: Array<{ channel: string; totals: SessionsUsageTotals }>;
     latency?: {
       count: number;

@@ -43,6 +43,12 @@ export async function setupCommand(
 
   const next: OpenClawConfig = {
     ...cfg,
+    gateway: {
+      ...cfg.gateway,
+      mode: cfg.gateway?.mode ?? "local",
+      bind: cfg.gateway?.bind ?? "loopback",
+      reload: cfg.gateway?.reload ?? { mode: "hybrid", debounceMs: 300 },
+    },
     agents: {
       ...cfg.agents,
       defaults: {
@@ -52,12 +58,29 @@ export async function setupCommand(
     },
   };
 
-  if (!existingRaw.exists || defaults.workspace !== workspace) {
+  const gatewayChanged =
+    !existingRaw.exists ||
+    cfg.gateway?.mode !== next.gateway?.mode ||
+    cfg.gateway?.bind !== next.gateway?.bind;
+
+  if (!existingRaw.exists || defaults.workspace !== workspace || gatewayChanged) {
     await writeConfigFile(next);
     if (!existingRaw.exists) {
-      runtime.log(`Wrote ${formatConfigPath(configPath)}`);
+      runtime.log(
+        `Wrote ${formatConfigPath(configPath)} (gateway.mode=local, workspace, sessions)`,
+      );
     } else {
-      logConfigUpdated(runtime, { path: configPath, suffix: "(set agents.defaults.workspace)" });
+      const parts = [];
+      if (defaults.workspace !== workspace) {
+        parts.push("agents.defaults.workspace");
+      }
+      if (gatewayChanged) {
+        parts.push("gateway");
+      }
+      logConfigUpdated(runtime, {
+        path: configPath,
+        suffix: parts.length ? `(${parts.join(", ")})` : undefined,
+      });
     }
   } else {
     runtime.log(`Config OK: ${formatConfigPath(configPath)}`);

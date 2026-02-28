@@ -117,6 +117,12 @@ export type SessionModelUsage = {
   totals: CostUsageTotals;
 };
 
+export type SessionCostSummaryByAgentMode = {
+  agentMode: string;
+  totals: CostUsageTotals;
+  dailyBreakdown?: SessionDailyUsage[];
+};
+
 export type SessionCostSummary = CostUsageTotals & {
   sessionId?: string;
   sessionFile?: string;
@@ -125,6 +131,8 @@ export type SessionCostSummary = CostUsageTotals & {
   durationMs?: number;
   activityDates?: string[]; // YYYY-MM-DD dates when session had activity
   dailyBreakdown?: SessionDailyUsage[]; // Per-day token/cost breakdown
+  /** Usage tagged by agent mode at consumption time (from usage-by-mode sidecar). */
+  byAgentMode?: SessionCostSummaryByAgentMode[];
   dailyMessageCounts?: SessionDailyMessageCounts[];
   dailyLatency?: SessionDailyLatency[];
   dailyModelUsage?: SessionDailyModelUsage[];

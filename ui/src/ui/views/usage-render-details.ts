@@ -72,6 +72,9 @@ function renderSessionSummary(
   if (session.agentId) {
     badges.push(`agent:${session.agentId}`);
   }
+  if (session.agentMode) {
+    badges.push(`mode:${session.agentMode}`);
+  }
   if (session.modelProvider || session.providerOverride) {
     badges.push(`provider:${session.modelProvider ?? session.providerOverride}`);
   }

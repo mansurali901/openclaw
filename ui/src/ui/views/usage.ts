@@ -599,6 +599,20 @@ export function renderUsage(props: UsageProps) {
             title="End Date"
             @change=${(e: Event) => props.onEndDateChange((e.target as HTMLInputElement).value)}
           />
+          <label class="usage-filters-inline" style="gap: 4px;" title="Show only usage between these times each day">
+            <span style="color: var(--muted);">From</span>
+            <input
+              type="time"
+              .value=${props.startTime}
+              @change=${(e: Event) => props.onStartTimeChange((e.target as HTMLInputElement).value)}
+            />
+            <span style="color: var(--muted);">to</span>
+            <input
+              type="time"
+              .value=${props.endTime}
+              @change=${(e: Event) => props.onEndTimeChange((e.target as HTMLInputElement).value)}
+            />
+          </label>
           <select
             title="Time zone"
             .value=${props.timeZone}
@@ -608,6 +622,28 @@ export function renderUsage(props: UsageProps) {
             <option value="local">Local</option>
             <option value="utc">UTC</option>
           </select>
+          <label class="usage-filters-inline" style="gap: 4px;" title="Show only usage tagged to this mode when the run happened (set per session in Sessions tab).">
+            <span style="color: var(--muted);">Agent mode:</span>
+            <select
+              title="Show only usage consumed in this agent mode (tagged at run time)"
+              .value=${props.agentModeFilter}
+              @change=${(e: Event) =>
+                props.onAgentModeFilterChange(
+                  (e.target as HTMLSelectElement).value as
+                    | ""
+                    | "full"
+                    | "minimal"
+                    | "none"
+                    | "inherit",
+                )}
+            >
+              <option value="">All</option>
+              <option value="full">Full</option>
+              <option value="minimal">Minimal</option>
+              <option value="none">None</option>
+              <option value="inherit">Inherit</option>
+            </select>
+          </label>
           <div class="chart-toggle">
             <button
               class="toggle-btn ${isTokenMode ? "active" : ""}"

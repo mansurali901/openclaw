@@ -14,6 +14,7 @@ export type UsageAggregates = SessionsUsageResult["aggregates"];
 export type UsageColumnId =
   | "channel"
   | "agent"
+  | "agentMode"
   | "provider"
   | "model"
   | "messages"
@@ -61,6 +62,14 @@ export type UsageProps = {
   timeZone: "local" | "utc";
   contextExpanded: boolean;
   headerPinned: boolean;
+  /** Server-side filter: show only usage consumed in this agent mode. Empty = no filter. */
+  agentModeFilter: "" | "full" | "minimal" | "none" | "inherit";
+  onAgentModeFilterChange: (mode: "" | "full" | "minimal" | "none" | "inherit") => void;
+  /** Time-of-day filter (HH:MM). When both set, only usage in this window each day is shown. */
+  startTime: string;
+  endTime: string;
+  onStartTimeChange: (value: string) => void;
+  onEndTimeChange: (value: string) => void;
   onStartDateChange: (date: string) => void;
   onEndDateChange: (date: string) => void;
   onRefresh: () => void;

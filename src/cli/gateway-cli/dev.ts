@@ -104,6 +104,7 @@ export async function ensureDevGatewayConfig(opts: { reset?: boolean }) {
     gateway: {
       mode: "local",
       bind: "loopback",
+      reload: { mode: "hybrid", debounceMs: 300 },
     },
     agents: {
       defaults: {

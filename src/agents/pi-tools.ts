@@ -236,8 +236,14 @@ export function createOpenClawCodingTools(options?: {
   disableMessageTool?: boolean;
   /** Whether the sender is an owner (required for owner-only tools). */
   senderIsOwner?: boolean;
+  /**
+   * Agent mode: full = all tools, minimal = read + message only (reduces tokens), none = message only.
+   * Used for token reduction when set per session in the Sessions tab.
+   */
+  agentMode?: "full" | "minimal" | "none";
 }): AnyAgentTool[] {
   const execToolName = "exec";
+  const agentMode = options?.agentMode;
   const sandbox = options?.sandbox?.enabled ? options.sandbox : undefined;
   const {
     agentId,
@@ -495,7 +501,16 @@ export function createOpenClawCodingTools(options?: {
       senderIsOwner: options?.senderIsOwner,
     }),
   ];
-  const toolsForMessageProvider = applyMessageProviderToolPolicy(tools, options?.messageProvider);
+  const toolsFilteredByAgentMode =
+    agentMode === "minimal"
+      ? tools.filter((t) => t.name === "read" || t.name === "message")
+      : agentMode === "none"
+        ? tools.filter((t) => t.name === "message")
+        : tools;
+  const toolsForMessageProvider = applyMessageProviderToolPolicy(
+    toolsFilteredByAgentMode,
+    options?.messageProvider,
+  );
   // Security: treat unknown/undefined as unauthorized (opt-in, not opt-out)
   const senderIsOwner = options?.senderIsOwner === true;
   const toolsByAuthorization = applyOwnerOnlyToolPolicy(toolsForMessageProvider, senderIsOwner);

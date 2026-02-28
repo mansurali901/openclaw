@@ -56,6 +56,21 @@ export function renderUsageTab(state: AppViewState) {
     timeZone: state.usageTimeZone,
     contextExpanded: state.usageContextExpanded,
     headerPinned: state.usageHeaderPinned,
+    agentModeFilter: state.usageAgentModeFilter,
+    onAgentModeFilterChange: (mode) => {
+      state.usageAgentModeFilter = mode;
+      void loadUsage(state);
+    },
+    startTime: state.usageStartTime,
+    endTime: state.usageEndTime,
+    onStartTimeChange: (value) => {
+      state.usageStartTime = value;
+      void loadUsage(state);
+    },
+    onEndTimeChange: (value) => {
+      state.usageEndTime = value;
+      void loadUsage(state);
+    },
     onStartDateChange: (date) => {
       state.usageStartDate = date;
       state.usageSelectedDays = [];

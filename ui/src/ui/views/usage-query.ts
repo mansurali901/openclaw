@@ -167,6 +167,7 @@ const buildQuerySuggestions = (
   if (!key) {
     return [
       { label: "agent:", value: "agent:" },
+      { label: "agentMode:", value: "agentMode:" },
       { label: "channel:", value: "channel:" },
       { label: "provider:", value: "provider:" },
       { label: "model:", value: "model:" },
@@ -190,6 +191,9 @@ const buildQuerySuggestions = (
   switch (key) {
     case "agent":
       addValues("agent", agents);
+      break;
+    case "agentmode":
+      addValues("agentMode", ["full", "minimal", "none", "inherit"]);
       break;
     case "channel":
       addValues("channel", channels);

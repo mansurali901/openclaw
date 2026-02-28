@@ -21,6 +21,7 @@ import type {
   ParsedTranscriptEntry,
   ParsedUsageEntry,
   SessionCostSummary,
+  SessionCostSummaryByAgentMode,
   SessionDailyLatency,
   SessionDailyMessageCounts,
   SessionDailyModelUsage,
@@ -33,6 +34,7 @@ import type {
   SessionUsageTimePoint,
   SessionUsageTimeSeries,
 } from "./session-cost-usage.types.js";
+import { getSidecarPath } from "./usage-by-mode-sidecar.js";
 
 export type {
   CostUsageDailyEntry,
@@ -165,6 +167,14 @@ const parseTranscriptEntry = (entry: Record<string, unknown>): ParsedTranscriptE
 
 const formatDayKey = (date: Date): string =>
   date.toLocaleDateString("en-CA", { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone });
+
+/** Minutes from midnight (0-1439) for ts in the given timezone. utcOffsetMinutes = minutes ahead of UTC. */
+function getLocalMinutesFromMidnight(tsMs: number, utcOffsetMinutes: number): number {
+  const d = new Date(tsMs + utcOffsetMinutes * 60 * 1000);
+  const h = d.getUTCHours();
+  const m = d.getUTCMinutes();
+  return (h * 60 + m + 1440) % 1440;
+}
 
 const computeLatencyStats = (values: number[]): SessionLatencyStats | undefined => {
   if (!values.length) {
@@ -459,6 +469,12 @@ export async function discoverAllSessions(params?: {
   return discovered.toSorted((a, b) => b.mtime - a.mtime);
 }
 
+export type TimeOfDayFilter = {
+  startMinutes: number;
+  endMinutes: number;
+  utcOffsetMinutes: number;
+};
+
 export async function loadSessionCostSummary(params: {
   sessionId?: string;
   sessionEntry?: SessionEntry;
@@ -467,6 +483,8 @@ export async function loadSessionCostSummary(params: {
   agentId?: string;
   startMs?: number;
   endMs?: number;
+  /** When set, only include entries whose local time-of-day (in the given offset) falls in [startMinutes, endMinutes]. */
+  timeOfDayFilter?: TimeOfDayFilter | null;
 }): Promise<SessionCostSummary | null> {
   const sessionFile =
     params.sessionFile ??
@@ -514,6 +532,13 @@ export async function loadSessionCostSummary(params: {
       }
       if (params.endMs !== undefined && ts !== undefined && ts > params.endMs) {
         return;
+      }
+      if (params.timeOfDayFilter && ts !== undefined) {
+        const { startMinutes, endMinutes, utcOffsetMinutes } = params.timeOfDayFilter;
+        const localMin = getLocalMinutesFromMidnight(ts, utcOffsetMinutes);
+        if (localMin < startMinutes || localMin > endMinutes) {
+          return;
+        }
       }
 
       if (ts !== undefined) {
@@ -715,6 +740,13 @@ export async function loadSessionCostSummary(params: {
       })
     : undefined;
 
+  const byAgentMode = await loadUsageByModeSidecar(
+    sessionFile,
+    params.startMs,
+    params.endMs,
+    params.timeOfDayFilter,
+  );
+
   return {
     sessionId: params.sessionId,
     sessionFile,
@@ -726,6 +758,7 @@ export async function loadSessionCostSummary(params: {
         : undefined,
     activityDates: Array.from(activityDatesSet).toSorted(),
     dailyBreakdown,
+    byAgentMode: byAgentMode.length ? byAgentMode : undefined,
     dailyMessageCounts,
     dailyLatency: dailyLatency.length ? dailyLatency : undefined,
     dailyModelUsage: dailyModelUsage.length ? dailyModelUsage : undefined,
@@ -735,6 +768,97 @@ export async function loadSessionCostSummary(params: {
     latency: computeLatencyStats(latencyValues),
     ...totals,
   };
+}
+
+async function loadUsageByModeSidecar(
+  sessionFile: string,
+  startMs?: number,
+  endMs?: number,
+  timeOfDayFilter?: TimeOfDayFilter | null,
+): Promise<SessionCostSummaryByAgentMode[]> {
+  const sidecarPath = getSidecarPath(sessionFile);
+  if (!fs.existsSync(sidecarPath)) {
+    return [];
+  }
+  const modeTotalsMap = new Map<string, CostUsageTotals>();
+  const modeDailyMap = new Map<string, Map<string, { tokens: number; cost: number }>>();
+  const fileStream = fs.createReadStream(sidecarPath, { encoding: "utf-8" });
+  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+  try {
+    for await (const line of rl) {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        continue;
+      }
+      let record: {
+        agentMode?: string;
+        input?: number;
+        output?: number;
+        cacheRead?: number;
+        cacheWrite?: number;
+        totalTokens?: number;
+        totalCost?: number;
+        timestamp?: number;
+      };
+      try {
+        record = JSON.parse(trimmed) as typeof record;
+      } catch {
+        continue;
+      }
+      const ts = record.timestamp;
+      if (startMs !== undefined && ts !== undefined && ts < startMs) {
+        continue;
+      }
+      if (endMs !== undefined && ts !== undefined && ts > endMs) {
+        continue;
+      }
+      if (timeOfDayFilter && ts !== undefined && Number.isFinite(ts)) {
+        const { startMinutes, endMinutes, utcOffsetMinutes } = timeOfDayFilter;
+        const localMin = getLocalMinutesFromMidnight(ts, utcOffsetMinutes);
+        if (localMin < startMinutes || localMin > endMinutes) {
+          continue;
+        }
+      }
+      const mode = typeof record.agentMode === "string" ? record.agentMode : "inherit";
+      const input = Number(record.input) || 0;
+      const output = Number(record.output) || 0;
+      const cacheRead = Number(record.cacheRead) || 0;
+      const cacheWrite = Number(record.cacheWrite) || 0;
+      const totalTokens = Number(record.totalTokens) || input + output + cacheRead + cacheWrite;
+      const totalCost = Number(record.totalCost) || 0;
+      const totals = modeTotalsMap.get(mode) ?? emptyTotals();
+      totals.input += input;
+      totals.output += output;
+      totals.cacheRead += cacheRead;
+      totals.cacheWrite += cacheWrite;
+      totals.totalTokens += totalTokens;
+      totals.totalCost += totalCost;
+      modeTotalsMap.set(mode, totals);
+      if (ts !== undefined && Number.isFinite(ts)) {
+        const dayKey = formatDayKey(new Date(ts));
+        const dailyMap = modeDailyMap.get(mode) ?? new Map();
+        const day = dailyMap.get(dayKey) ?? { tokens: 0, cost: 0 };
+        day.tokens += totalTokens;
+        day.cost += totalCost;
+        dailyMap.set(dayKey, day);
+        modeDailyMap.set(mode, dailyMap);
+      }
+    }
+  } finally {
+    rl.close();
+    fileStream.destroy();
+  }
+  return Array.from(modeTotalsMap.entries())
+    .map(([agentMode, totals]) => {
+      const dailyMap = modeDailyMap.get(agentMode);
+      const dailyBreakdown = dailyMap
+        ? Array.from(dailyMap.entries())
+            .map(([date, data]) => ({ date, tokens: data.tokens, cost: data.cost }))
+            .toSorted((a, b) => a.date.localeCompare(b.date))
+        : undefined;
+      return { agentMode, totals, dailyBreakdown };
+    })
+    .toSorted((a, b) => b.totals.totalTokens - a.totals.totalTokens);
 }
 
 export async function loadSessionUsageTimeSeries(params: {

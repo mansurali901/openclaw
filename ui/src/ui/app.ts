@@ -258,6 +258,8 @@ export class OpenClawApp extends LitElement {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   })();
+  @state() usageStartTime = "";
+  @state() usageEndTime = "";
   @state() usageSelectedSessions: string[] = [];
   @state() usageSelectedDays: string[] = [];
   @state() usageSelectedHours: number[] = [];
@@ -297,6 +299,8 @@ export class OpenClawApp extends LitElement {
   @state() usageLogFilterTools: string[] = [];
   @state() usageLogFilterHasTools = false;
   @state() usageLogFilterQuery = "";
+  /** Filter usage to tokens consumed in this agent mode only (server-side). Empty = no filter. */
+  @state() usageAgentModeFilter: "" | "full" | "minimal" | "none" | "inherit" = "";
 
   // Non-reactive (don’t trigger renders just for timer bookkeeping).
   usageQueryDebounceTimer: number | null = null;

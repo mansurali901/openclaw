@@ -205,6 +205,25 @@ const parseDays = (raw: unknown): number | undefined => {
   return undefined;
 };
 
+/** Parse "HH:MM" or "HH:MM:SS" to minutes from midnight (0-1439). Returns undefined if invalid. */
+const parseTimeToMinutes = (raw: unknown): number | undefined => {
+  if (typeof raw !== "string" || !raw.trim()) {
+    return undefined;
+  }
+  const parts = raw.trim().split(":");
+  const h = parts.length >= 1 ? Number(parts[0]) : NaN;
+  const m = parts.length >= 2 ? Number(parts[1]) : 0;
+  if (!Number.isInteger(h) || !Number.isInteger(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+    return undefined;
+  }
+  return h * 60 + m;
+};
+
+/**
+ * Compute "time of day" in minutes from midnight (0-1439) for a timestamp in the given timezone.
+ * utcOffsetMinutes: minutes ahead of UTC (e.g. 330 for UTC+5:30).
+ */
+
 /**
  * Get date range from params (startDate/endDate or days).
  * Falls back to last 30 days if not provided.
@@ -346,6 +365,8 @@ export type SessionUsageEntry = {
   sessionId?: string;
   updatedAt?: number;
   agentId?: string;
+  /** Per-session agent mode (full, minimal, none) when set; used for usage breakdown. */
+  agentMode?: "full" | "minimal" | "none";
   channel?: string;
   chatType?: string;
   origin?: {
@@ -372,6 +393,7 @@ export type SessionsUsageAggregates = {
   byModel: SessionModelUsage[];
   byProvider: SessionModelUsage[];
   byAgent: Array<{ agentId: string; totals: CostUsageSummary["totals"] }>;
+  byAgentMode: Array<{ agentMode: string; totals: CostUsageSummary["totals"] }>;
   byChannel: Array<{ channel: string; totals: CostUsageSummary["totals"] }>;
   latency?: SessionLatencyStats;
   dailyLatency?: SessionDailyLatency[];
@@ -427,15 +449,41 @@ export const usageHandlers: GatewayRequestHandlers = {
 
     const p = params;
     const config = loadConfig();
+    const interpretation = resolveDateInterpretation({
+      mode: p.mode,
+      utcOffset: p.utcOffset,
+    });
     const { startMs, endMs } = parseDateRange({
       startDate: p.startDate,
       endDate: p.endDate,
       mode: p.mode,
       utcOffset: p.utcOffset,
     });
+    const startTimeMinutes = parseTimeToMinutes(p.startTime);
+    const endTimeMinutes = parseTimeToMinutes(p.endTime);
+    const timeOfDayFilter =
+      startTimeMinutes !== undefined && endTimeMinutes !== undefined
+        ? {
+            startMinutes: startTimeMinutes,
+            endMinutes: endTimeMinutes,
+            utcOffsetMinutes:
+              interpretation.mode === "specific"
+                ? interpretation.utcOffsetMinutes
+                : interpretation.mode === "gateway"
+                  ? -new Date().getTimezoneOffset()
+                  : 0,
+          }
+        : null;
     const limit = typeof p.limit === "number" && Number.isFinite(p.limit) ? p.limit : 50;
     const includeContextWeight = p.includeContextWeight ?? false;
     const specificKey = typeof p.key === "string" ? p.key.trim() : null;
+    const filterAgentMode =
+      p.agentMode === "full" ||
+      p.agentMode === "minimal" ||
+      p.agentMode === "none" ||
+      p.agentMode === "inherit"
+        ? p.agentMode
+        : null;
 
     // Load session store for named sessions
     const { storePath, store } = loadCombinedSessionStoreForGateway(config);
@@ -574,6 +622,7 @@ export const usageHandlers: GatewayRequestHandlers = {
     const byModelMap = new Map<string, SessionModelUsage>();
     const byProviderMap = new Map<string, SessionModelUsage>();
     const byAgentMap = new Map<string, CostUsageSummary["totals"]>();
+    const byAgentModeMap = new Map<string, CostUsageSummary["totals"]>();
     const byChannelMap = new Map<string, CostUsageSummary["totals"]>();
     const dailyAggregateMap = new Map<
       string,
@@ -631,7 +680,7 @@ export const usageHandlers: GatewayRequestHandlers = {
 
     for (const merged of limitedEntries) {
       const agentId = parseAgentSessionKey(merged.key)?.agentId;
-      const usage = await loadSessionCostSummary({
+      const rawUsage = await loadSessionCostSummary({
         sessionId: merged.sessionId,
         sessionEntry: merged.storeEntry,
         sessionFile: merged.sessionFile,
@@ -639,7 +688,28 @@ export const usageHandlers: GatewayRequestHandlers = {
         agentId,
         startMs,
         endMs,
+        timeOfDayFilter,
       });
+
+      let usage: SessionCostSummary | null = rawUsage;
+      if (rawUsage && filterAgentMode) {
+        if (rawUsage.byAgentMode && rawUsage.byAgentMode.length > 0) {
+          const bucket = rawUsage.byAgentMode.find((b) => b.agentMode === filterAgentMode);
+          if (!bucket || (bucket.totals.totalTokens === 0 && bucket.totals.totalCost === 0)) {
+            continue;
+          }
+          usage = {
+            ...bucket.totals,
+            sessionId: rawUsage.sessionId,
+            sessionFile: rawUsage.sessionFile,
+            dailyBreakdown: bucket.dailyBreakdown,
+          } as SessionCostSummary;
+        } else {
+          if ((merged.storeEntry?.agentMode ?? "inherit") !== filterAgentMode) {
+            continue;
+          }
+        }
+      }
 
       if (usage) {
         aggregateTotals.input += usage.input;
@@ -760,6 +830,19 @@ export const usageHandlers: GatewayRequestHandlers = {
           byAgentMap.set(agentId, agentTotals);
         }
 
+        if (rawUsage?.byAgentMode && rawUsage.byAgentMode.length > 0) {
+          for (const bucket of rawUsage.byAgentMode) {
+            const agentModeTotals = byAgentModeMap.get(bucket.agentMode) ?? emptyTotals();
+            mergeTotals(agentModeTotals, bucket.totals);
+            byAgentModeMap.set(bucket.agentMode, agentModeTotals);
+          }
+        } else {
+          const agentModeKey = merged.storeEntry?.agentMode ?? "inherit";
+          const agentModeTotals = byAgentModeMap.get(agentModeKey) ?? emptyTotals();
+          mergeTotals(agentModeTotals, usage);
+          byAgentModeMap.set(agentModeKey, agentModeTotals);
+        }
+
         if (channel) {
           const channelTotals = byChannelMap.get(channel) ?? emptyTotals();
           mergeTotals(channelTotals, usage);
@@ -806,6 +889,7 @@ export const usageHandlers: GatewayRequestHandlers = {
         sessionId: merged.sessionId,
         updatedAt: merged.updatedAt,
         agentId,
+        agentMode: merged.storeEntry?.agentMode,
         channel,
         chatType,
         origin: merged.storeEntry?.origin,
@@ -860,6 +944,9 @@ export const usageHandlers: GatewayRequestHandlers = {
       byAgent: Array.from(byAgentMap.entries())
         .map(([id, totals]) => ({ agentId: id, totals }))
         .toSorted((a, b) => b.totals.totalCost - a.totals.totalCost),
+      byAgentMode: Array.from(byAgentModeMap.entries())
+        .map(([mode, totals]) => ({ agentMode: mode, totals }))
+        .toSorted((a, b) => b.totals.totalTokens - a.totals.totalTokens),
       ...tail,
     };
 

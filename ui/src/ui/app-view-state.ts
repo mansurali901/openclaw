@@ -169,6 +169,8 @@ export type AppViewState = {
   usageError: string | null;
   usageStartDate: string;
   usageEndDate: string;
+  usageStartTime: string;
+  usageEndTime: string;
   usageSelectedSessions: string[];
   usageSelectedDays: string[];
   usageSelectedHours: number[];
@@ -198,6 +200,7 @@ export type AppViewState = {
   usageLogFilterTools: string[];
   usageLogFilterHasTools: boolean;
   usageLogFilterQuery: string;
+  usageAgentModeFilter: "" | "full" | "minimal" | "none" | "inherit";
   cronLoading: boolean;
   cronJobsLoadingMore: boolean;
   cronJobs: CronJob[];

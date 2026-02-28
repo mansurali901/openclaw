@@ -195,6 +195,20 @@ export function renderSessions(props: SessionsProps) {
       <div class="muted" style="margin-top: 12px;">
         ${props.result ? `Store: ${props.result.path}` : ""}
       </div>
+      <div class="muted" style="margin-top: 6px; font-size: 0.9em;">
+        ${
+          props.result
+            ? "Label, thinking, verbose, reasoning, and agent mode are saved to this session store. The main config file (openclaw.json) is not modified here; use the Config tab to change gateway/agent settings (gateway restarts when that file is saved and gateway.reload.mode is not off)."
+            : ""
+        }
+      </div>
+      <div class="muted" style="margin-top: 4px; font-size: 0.85em;">
+        ${
+          props.result
+            ? "Agent mode: Full = all tools; Minimal = read + message only (reduces token use); None = message only. Set a session to Minimal then run the agent; token consumption for that run is tagged to the selected mode and shown in the Usage tab."
+            : ""
+        }
+      </div>
 
       <div class="table" style="margin-top: 16px;">
         <div class="table-head">

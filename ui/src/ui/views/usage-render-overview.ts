@@ -445,6 +445,12 @@ function renderUsageInsights(
     value: formatCost(entry.totals.totalCost),
     sub: formatTokens(entry.totals.totalTokens),
   }));
+  const byAgentMode = aggregates.byAgentMode ?? [];
+  const topAgentModes = byAgentMode.slice(0, 5).map((entry) => ({
+    label: entry.agentMode === "inherit" ? "inherit (default)" : entry.agentMode,
+    value: formatTokens(entry.totals.totalTokens),
+    sub: formatCost(entry.totals.totalCost),
+  }));
 
   return html`
     <section class="card" style="margin-top: 16px;">
@@ -535,6 +541,11 @@ function renderUsageInsights(
         ${renderInsightList("Top Tools", topTools, "No tool calls")}
         ${renderInsightList("Top Agents", topAgents, "No agent data")}
         ${renderInsightList("Top Channels", topChannels, "No channel data")}
+        ${renderInsightList(
+          "Tokens by agent mode",
+          topAgentModes,
+          "No tagged data yet. Set agent mode per session in the Sessions tab (e.g. Minimal), run the agent, then refresh.",
+        )}
         ${renderPeakErrorList("Peak Error Days", errorDays, "No error data")}
         ${renderPeakErrorList("Peak Error Hours", errorHours, "No error data")}
       </div>
@@ -584,6 +595,9 @@ function renderSessionsCard(
     }
     if (showColumn("agent") && s.agentId) {
       parts.push(`agent:${s.agentId}`);
+    }
+    if (showColumn("agentMode") && s.agentMode) {
+      parts.push(`mode:${s.agentMode}`);
     }
     if (showColumn("provider") && (s.modelProvider || s.providerOverride)) {
       parts.push(`provider:${s.modelProvider ?? s.providerOverride}`);

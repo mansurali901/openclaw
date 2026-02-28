@@ -328,6 +328,7 @@ const buildAggregatesFromSessions = (
         byModel: [],
         byProvider: [],
         byAgent: [],
+        byAgentMode: [],
         byChannel: [],
         daily: [],
       }
@@ -345,6 +346,7 @@ const buildAggregatesFromSessions = (
     { provider?: string; model?: string; count: number; totals: UsageTotals }
   >();
   const agentMap = new Map<string, UsageTotals>();
+  const agentModeMap = new Map<string, UsageTotals>();
   const channelMap = new Map<string, UsageTotals>();
   const dailyMap = new Map<
     string,
@@ -429,6 +431,10 @@ const buildAggregatesFromSessions = (
       mergeUsageTotals(totals, usage);
       agentMap.set(session.agentId, totals);
     }
+    const agentModeKey = session.agentMode ?? "inherit";
+    const agentModeTotals = agentModeMap.get(agentModeKey) ?? emptyUsageTotals();
+    mergeUsageTotals(agentModeTotals, usage);
+    agentModeMap.set(agentModeKey, agentModeTotals);
     if (session.channel) {
       const totals = channelMap.get(session.channel) ?? emptyUsageTotals();
       mergeUsageTotals(totals, usage);
@@ -521,6 +527,9 @@ const buildAggregatesFromSessions = (
     byAgent: Array.from(agentMap.entries())
       .map(([agentId, totals]) => ({ agentId, totals }))
       .toSorted((a, b) => b.totals.totalCost - a.totals.totalCost),
+    byAgentMode: Array.from(agentModeMap.entries())
+      .map(([agentMode, totals]) => ({ agentMode, totals }))
+      .toSorted((a, b) => b.totals.totalTokens - a.totals.totalTokens),
     ...tail,
   };
 };
